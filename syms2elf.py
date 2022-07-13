@@ -669,8 +669,8 @@ def write_symbols(input_file, output_file, symbols):
                 "other" : 0,
                 "shndx" : sh_idx
             }
-
-            #log("0x%08x - 0x%08x - %s - %d/%d - %d" % (s.value, s.size, s.name, strtab_raw.index(s.name), len(strtab_raw), s.info))
+            
+            log("0x%08x - 0x%08x - %s - %d/%d - %d" % (s.value, s.size, s.name, strtab_raw.index(bytes(s.name.encode('ascii'))), len(strtab_raw), s.info))
             bin.append_symbol(sym)
 
         # add symbol strings
@@ -680,6 +680,7 @@ def write_symbols(input_file, output_file, symbols):
         bin.save(output_file)
 
     except:
+        import traceback
         log(traceback.format_exc())
 
 def ida_fcn_filter(func_ea):
