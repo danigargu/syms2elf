@@ -9,7 +9,8 @@ Supports 32 and 64-bits file format.
   * **IDA Pro**: Simply, copy `syms2elf.py` to the IDA's plugins folder.
   * **radare2**: In radare2 environment, pass this command: #!pipe python ./syms2elf.py <output_file>
   *  **rizin** : In rizin environment, pass this command: #!pipe python ./syms2elf.py <output_file>
-
+  * Also, if you are using radare2, make sure that you have install r2pipe. You can use this command: pip3 install r2pipe
+  * For rizin: pip3 install rzpipe
 
 
 
@@ -25,7 +26,7 @@ Rename some functions in IDA or r2, run `syms2elf` and select the output file.
 
 ![IDA output log](https://cloud.githubusercontent.com/assets/1675387/13477862/a02aa742-e0ce-11e5-835e-3a0992a3f171.png)
 
-![r2_syms2elf](https://cloud.githubusercontent.com/assets/1675387/13831270/adddfae2-ebd2-11e5-8dcd-877c9c67faed.png)
+![r2_syms2elf](https://user-images.githubusercontent.com/40752497/181514837-0fe5de8a-29db-4a67-a614-f10a773b5e1c.png)
 
 After that:
 
