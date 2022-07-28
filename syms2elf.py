@@ -14,27 +14,30 @@
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software  Foundation, either  version 3 of  the License, or
 #  (at your option) any later version.
-#
+#  Ported to rizin by Rukatonoshi
+
 
 PLUG_NAME    = "syms2elf"
 
 import os
 import sys
-
 from ctypes import *
 from struct import unpack
 
 USE_R2  = False
 USE_IDA = False
+USE_RIZIN = False
 
 try:
     import idaapi
     USE_IDA = True
 except:
     if "radare2" in os.environ.get('PATH',''):
-        USE_R2  = True
+        USE_R2 = True
+    elif "rizin" in os.environ.get('PATH',''):
+        USE_RIZIN = True
     else:
-        print("ERROR: The plugin must be run in IDA or radare2")
+        print("ERROR: The plugin must be run in IDA, radare2 or rizin")
         sys.exit(0)
 
 SHN_UNDEF = 0
@@ -706,6 +709,12 @@ def get_section(addr):
       return (idx, s['name'])
   return None
 
+def get_section_rz(addr):
+  for idx, s in enumerate(rzp.cmdj("iSj")):
+    if s['vaddr'] <= addr < (s['vaddr'] + s['size']):
+      return (idx, s['name'])
+  return None
+
 def r2_fcn_filter(fcn):
     if fcn['name'].startswith(("sym.imp", "loc.imp", "section")):
         return False
@@ -728,11 +737,28 @@ def get_r2_symbols():
 
     return symbols
 
+def get_rizin_symbols():
+    symbols = []
+
+    for fnc in filter(r2_fcn_filter, rzp.cmdj("aflj")):
+        sh_idx, sh_name = get_section_rz(fnc['offset'])
+        fnc_name = fnc['name']
+
+        if fnc_name.startswith(("sym","fcn")):
+            fnc_name = fnc_name[4:]
+            if fnc_name.startswith("go."):
+                fnc_name = fnc_name[3:]
+
+        symbols.append(Symbol(fnc_name, STB_GLOBAL_FUNC, 
+            fnc['offset'], int(fnc['size']), sh_name))
+
+    return symbols
+
 if USE_IDA:
 
-    import idc
-    import ida_nalt
     import ida_kernwin
+    import ida_nalt
+    import idc
     from idaapi import *
     from idautils import *
 
@@ -800,16 +826,16 @@ if USE_IDA:
         return Syms2Elf_t()
 
 elif USE_R2:
-
     import r2pipe
     r2p = r2pipe.open()
     log = log_r2
 
     if len(sys.argv) < 2:
-        log("Usage: $syms2elf <output file>")
+        log("Usage: #!pipe python ./syms2elf.py <output_file>")
         sys.exit(0)
 
     file_info = r2p.cmdj("ij").get("core")
+    #print(file_info)
 
     if file_info['format'].lower() in ('elf','elf64'):
         symbols = get_r2_symbols()  
@@ -817,4 +843,22 @@ elif USE_R2:
     else:
         log("The input file is not a ELF")
 
+elif USE_RIZIN:
+    import rzpipe
 
+    rzp = rzpipe.open()
+    log = log_r2
+
+    if len(sys.argv) < 2:
+        log("Usage: #!pipe python ./syms2elf.py <output_file>")
+        sys.exit(0)
+
+    file_info = rzp.cmdj("ij").get("core")
+    #print(file_info)
+
+    if file_info['format'].lower() in ('elf','elf64'):
+        symbols = get_rizin_symbols()
+        write_symbols(file_info['file'], sys.argv[1], symbols)
+    else:
+        log("The input file is not a ELF")
+    sys.exit(0)
