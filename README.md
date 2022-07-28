@@ -28,6 +28,9 @@ Rename some functions in IDA or r2, run `syms2elf` and select the output file.
 
 ![r2_syms2elf](https://user-images.githubusercontent.com/40752497/181514837-0fe5de8a-29db-4a67-a614-f10a773b5e1c.png)
 
+![cutter](https://user-images.githubusercontent.com/40752497/181536360-f725857c-1893-48c4-ac4a-96288a034b31.png)
+
+
 After that:
 
 ```
