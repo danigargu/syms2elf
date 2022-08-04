@@ -1,6 +1,6 @@
 # syms2elf
 
-The plugin exports all the symbols recognized by IDA Pro and only functions in radare2 to the ELF symbol table. This allows us to use the power of IDA/r2 in recognizing functions (analysis, FLIRT signatures, manual creation, renaming, etc), but not be limited to the exclusive use of this tools.
+The plugin exports all the symbols recognized by IDA Pro (only functions in radare2) to the ELF symbol table. This allows us to use the power of IDA/r2 in recognizing functions (analysis, FLIRT signatures, manual creation, renaming, etc), but not be limited to the exclusive use of this tools.
 
 Supports 32 and 64-bits file format.
 
