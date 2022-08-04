@@ -38,6 +38,9 @@ except:
         sys.exit(0)
 
 SHN_UNDEF = 0
+
+#counted from Symbol Binding(b) and Symbol Types(t) like that: (((b)<<4)+((t)&0xf)), for more info use: https://docs.oracle.com/cd/E19683-01/816-1386/chapter6-79797/index.html
+STB_GLOBAL_VAR=0x11
 STB_GLOBAL_FUNC = 0x12
 
 class SHTypes:
@@ -558,6 +561,7 @@ class ELF:
         with open(output, 'wb') as f:
             f.write(self.binary)
 
+
 class Symbol:
     def __init__(self, name, info, value, size, shname, shndx=-1):
         self.name   = name
@@ -691,7 +695,7 @@ def get_ida_symbols():
     symbols = []
 
     for f in filter(ida_fcn_filter, Functions()):
-        func     = get_func(f)
+        func     = ida_funcs.get_func(f)#added ida_funcs
         seg_name = idc.get_segm_name(f)
 
         fn_name = idc.get_func_name(f)
@@ -699,6 +703,21 @@ def get_ida_symbols():
             int(func.start_ea), int(func.size()), seg_name))
 
     return symbols
+
+#added variable symbols support
+def get_ida_varnames():
+    names=[]
+    for n in Names():
+        if idc.get_segm_name(n[0]) in (".rodata", ".data"):
+            var_name=n[1]
+            start=n[0]
+            size = get_item_size(start) #size of the global variable value or length of its name
+            if size==0:
+                size=len(var_name)
+            seg_name=idc.get_segm_name(n[0])
+            names.append(Symbol(var_name, STB_GLOBAL_VAR, int(start), int(size), seg_name))
+    
+    return names
 
 def get_section(addr):
   for idx, s in enumerate(r2p.cmdj("iSj")):
@@ -789,8 +808,9 @@ if USE_IDA:
 
             if f.Show():
                 symbols = get_ida_symbols()
+                varnames = get_ida_varnames()
                 output_file = f.txtFile.value
-                write_symbols(f.input_elf, output_file, symbols)
+                write_symbols(f.input_elf, output_file, symbols+varnames)
                 f.Free()
 
         def term(self):
@@ -816,5 +836,3 @@ elif USE_R2:
         write_symbols(file_info['file'], sys.argv[1], symbols)
     else:
         log("The input file is not a ELF")
-
-
