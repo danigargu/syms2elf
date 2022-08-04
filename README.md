@@ -45,4 +45,4 @@ Now, you can open it with others tools and analyzing in a more comfortable way.
 
 Any comment or request will be highly appreciated :-)
 
-This modification (global variable symbol names support) was started as a part of [Digital Security](https://github.com/DSecurity)'s Research Centre internship ["Summ3r of h4ck 2022"](https://dsec.ru/about/summerofhack/).
+This modification (global variable symbol names support) was started as a part of [Digital Security](https://github.com/DSecurity)'s Research Centre internship ["Summ3r of h4ck 2022"](https://dsec.ru/about/vacancies/#internship).
