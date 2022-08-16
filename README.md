@@ -44,7 +44,7 @@ Now, you can open it with others tools and analyzing in a more comfortable way.
 
   * Daniel García (@danigargu)
   * Jesús Olmos (@sha0coder)
-  * Stupnitskiy Ivan (@YanagiRu) -- plugin porting
+  * Ivan Stupnitskiy (@YanagiRu) -- plugin porting
 ## CONTACT 
 
 Any comment or request will be highly appreciated :-)
