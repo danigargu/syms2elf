@@ -7,10 +7,10 @@ Supports 32 and 64-bits file format.
 ## INSTALLATION
 
   * **IDA Pro**: Simply, copy `syms2elf.py` to the IDA's plugins folder.
-  * **radare2**: In radare2 environment, pass this command: #!pipe python ./syms2elf.py <output_file>
-  *  **rizin** : In rizin environment, pass this command: #!pipe python ./syms2elf.py <output_file>
-  * Also, if you are using radare2, make sure that you have install r2pipe. You can use this command: pip3 install r2pipe
-  * For rizin: pip3 install rzpipe
+  * **radare2**: In radare2 environment, pass this command: `#!pipe python ./syms2elf.py <output_file>`
+  *  **rizin** : In rizin environment, pass this command: `#!pipe python ./syms2elf.py <output_file>`
+  * Also, if you are using radare2, make sure that you have install r2pipe. You can use this command: `pip3 install r2pipe`
+  * For rizin: `pip3 install rzpipe`
 
 
 
@@ -44,6 +44,9 @@ Now, you can open it with others tools and analyzing in a more comfortable way.
 
   * Daniel García (@danigargu)
   * Jesús Olmos (@sha0coder)
+  * Stupnitskiy Ivan (@YanagiRu) -- plugin porting
 ## CONTACT 
 
 Any comment or request will be highly appreciated :-)
+
+This modification (plugin porting to rizin & cutter) was started as a part of [Digital Security](https://github.com/DSecurity)'s Research Centre internship ["Summ3r of h4ck 2022"](https://dsec.ru/about/vacancies/#internship).
