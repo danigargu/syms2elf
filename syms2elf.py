@@ -14,28 +14,37 @@
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software  Foundation, either  version 3 of  the License, or
 #  (at your option) any later version.
-#
+#  Ported to rizin by Rukatonoshi
+from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QHBoxLayout, QLabel, QWidget, QSizePolicy, QPushButton, QLineEdit
 
 PLUG_NAME    = "syms2elf"
 
 import os
 import sys
-
 from ctypes import *
 from struct import unpack
 
 USE_R2  = False
 USE_IDA = False
+USE_RIZIN = False
+USE_CUTTER = False
 
 try:
-    import idaapi
-    USE_IDA = True
+    import cutter
+    USE_CUTTER = True
 except:
-    if "radare2" in os.environ.get('PATH',''):
-        USE_R2  = True
-    else:
-        print("ERROR: The plugin must be run in IDA or radare2")
-        sys.exit(0)
+    try:
+        import idaapi
+        USE_IDA = True
+    except:
+        if "radare2" in os.environ.get('PATH',''):
+            USE_R2 = True
+        elif "rizin" in os.environ.get('PATH',''):
+            USE_RIZIN = True
+        else:
+            print("ERROR: The plugin must be run in IDA, radare2, rizin or cutter")
+            sys.exit(0)
 
 SHN_UNDEF = 0
 STB_GLOBAL_FUNC = 0x12
@@ -572,7 +581,10 @@ class Symbol:
             self.info, self.shname)
 
 def log(msg=''):
-    print("[%s] %s" % (PLUG_NAME, msg))
+    try:
+        print("[%s] %s" % (PLUG_NAME, msg))
+    except:
+        cutter.message("[%s] %s" % (PLUG_NAME, msg))
 
 def log_r2(msg=''):
     print("%s" % msg)
@@ -706,6 +718,18 @@ def get_section(addr):
       return (idx, s['name'])
   return None
 
+def get_section_rz(addr):
+  for idx, s in enumerate(rzp.cmdj("iSj")):
+    if s['vaddr'] <= addr < (s['vaddr'] + s['size']):
+      return (idx, s['name'])
+  return None
+
+def get_section_cutter(addr):
+  for idx, s in enumerate(cutter.cmdj("iSj")):
+    if s['vaddr'] <= addr < (s['vaddr'] + s['size']):
+      return (idx, s['name'])
+  return None
+
 def r2_fcn_filter(fcn):
     if fcn['name'].startswith(("sym.imp", "loc.imp", "section")):
         return False
@@ -728,11 +752,60 @@ def get_r2_symbols():
 
     return symbols
 
+def get_rizin_symbols():
+    symbols = []
+
+    for fnc in filter(r2_fcn_filter, rzp.cmdj("aflj")):
+        sh_idx, sh_name = get_section_rz(fnc['offset'])
+        fnc_name = fnc['name']
+
+        if fnc_name.startswith(("sym","fcn")):
+            fnc_name = fnc_name[4:]
+            if fnc_name.startswith("go."):
+                fnc_name = fnc_name[3:]
+
+        symbols.append(Symbol(fnc_name, STB_GLOBAL_FUNC, 
+            fnc['offset'], int(fnc['size']), sh_name))
+
+    return symbols
+
+def get_section_cutter(addr):
+  for idx, s in enumerate(cutter.cmdj("iSj")):
+    if s['vaddr'] <= addr < (s['vaddr'] + s['size']):
+      return (idx, s['name'])
+  return None
+
+def get_cutter_symbols():
+    symbols = []
+
+    for fnc in filter(r2_fcn_filter, cutter.cmdj("aflj")):
+        sh_idx, sh_name = get_section_cutter(fnc['offset'])
+        fnc_name = fnc['name']
+
+        if fnc_name.startswith(("sym","fcn")):
+            fnc_name = fnc_name[4:]
+            if fnc_name.startswith("go."):
+                fnc_name = fnc_name[3:]
+
+        symbols.append(Symbol(fnc_name, STB_GLOBAL_FUNC, 
+            fnc['offset'], int(fnc['size']), sh_name))
+
+    return symbols
+
+def get_path(file_path):
+    i = 0
+    path_to_dir = ""
+    for pos, char in enumerate(file_path):
+        if char == '/':
+            i = pos
+    path_to_dir = file_path[:i+1]
+    return path_to_dir
+
 if USE_IDA:
 
-    import idc
-    import ida_nalt
     import ida_kernwin
+    import ida_nalt
+    import idc
     from idaapi import *
     from idautils import *
 
@@ -800,16 +873,16 @@ if USE_IDA:
         return Syms2Elf_t()
 
 elif USE_R2:
-
     import r2pipe
     r2p = r2pipe.open()
     log = log_r2
 
     if len(sys.argv) < 2:
-        log("Usage: $syms2elf <output file>")
+        log("Usage: #!pipe python ./syms2elf.py <output_file>")
         sys.exit(0)
 
     file_info = r2p.cmdj("ij").get("core")
+    #print(file_info)
 
     if file_info['format'].lower() in ('elf','elf64'):
         symbols = get_r2_symbols()  
@@ -817,4 +890,94 @@ elif USE_R2:
     else:
         log("The input file is not a ELF")
 
+elif USE_RIZIN:
+    import rzpipe
 
+    rzp = rzpipe.open()
+    log = log_r2
+
+    if len(sys.argv) < 2:
+        log("Usage: #!pipe python ./syms2elf.py <output_file>")
+        sys.exit(0)
+
+    file_info = rzp.cmdj("ij").get("core")
+    #print(file_info)
+
+    if file_info['format'].lower() in ('elf','elf64'):
+        symbols = get_rizin_symbols()
+        write_symbols(file_info['file'], sys.argv[1], symbols)
+    else:
+        log("The input file is not a ELF")
+    sys.exit(0)
+
+elif USE_CUTTER:
+    class Syms2ElfWidget(cutter.CutterDockWidget):
+        def __init__(self, parent):
+            super(Syms2ElfWidget, self).__init__(parent)
+            self.setObjectName("WidgetForSyms2Elf")
+            self.setWindowTitle("syms2elf")
+
+            content = QWidget()
+            self.setWidget(content)
+
+            # Create layout and label
+            layout = QHBoxLayout(content)
+
+            self.output_path = QLineEdit(content)
+            self.output_path.setPlaceholderText("Enter the filename")
+            self.output_path.setMinimumWidth(400)
+            layout.addWidget(self.output_path)
+            layout.setAlignment(self.output_path, Qt.AlignHCenter | Qt.AlignTrailing)
+
+            button = QPushButton(content)
+            button.setText("Export")
+            button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
+            button.setMaximumHeight(50)
+            button.setMaximumWidth(200)
+            layout.addWidget(button)
+            layout.setAlignment(button, Qt.AlignHCenter | Qt.AlignLeading)
+
+            button.clicked.connect(self.export_syms)
+
+            self.show()
+
+        def export_syms(self):
+            file_info = cutter.cmdj("ij").get("core")
+            #cutter.message("%s\n" % file_info)
+            file_name = self.output_path.text()
+
+            if file_info['format'].lower() in ('elf','elf64'):
+                symbols = get_cutter_symbols()
+                #cutter.message("%s\n" % symbols)
+                path = get_path(file_info['file'])
+                file_name = path + file_name
+                #cutter.message("%s\n" % file_name)
+                write_symbols(file_info['file'], file_name, symbols)
+            else:
+                cutter.message("The input file is not an ELF!")
+
+
+    class CutterSyms2ElfPlugin(cutter.CutterPlugin):
+        name = "Syms2Elf Plugin"
+        description = "Export the symbols to the ELF symbol table."
+        version = "1.1"
+        author = "Rukatonoshi"
+
+        # Override CutterPlugin methods
+
+        def __init__(self):
+            super(CutterSyms2ElfPlugin, self).__init__()
+
+        def setupPlugin(self):
+            pass
+
+        def setupInterface(self, main):
+            # Dock widget
+            widget = Syms2ElfWidget(main)
+            main.addPluginDockWidget(widget)
+
+        def terminate(self): # optional
+            cutter.message("CutterSyms2ElfPlugin shutting down")
+
+    def create_cutter_plugin():
+        return CutterSyms2ElfPlugin()
